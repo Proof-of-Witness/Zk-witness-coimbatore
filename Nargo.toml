@@ -1,0 +1,6 @@
+[package]
+name = "zkwitness"
+type = "bin"
+authors = [""]
+
+[dependencies]
