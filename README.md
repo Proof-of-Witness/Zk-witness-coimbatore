@@ -15,7 +15,7 @@ This project implements a zero-knowledge proof circuit that verifies Sudoku puzz
 
 - **Noir**: A domain-specific language for zero-knowledge proofs
 - **Nargo**: Noir's package manager and build tool
-- **Barretenberg**: The proving system backend
+- **Barretenberg (BB)**: The proving system backend with CLI tools for proof generation and verification
 
 ## 📁 Project Structure
 
@@ -34,11 +34,14 @@ ZK Witness Coimbatore/
 
 ### Prerequisites
 
-1. **Install Noir**: Follow the official installation guide at [noir-lang.org](https://noir-lang.org/getting_started/installation/)
+1. **Install Noir**: Follow the official installation guide at [noir-lang.org](https://noir-lang.org/docs/getting_started/quick_start)
 
-2. **Verify Installation**:
+2. **Install Barretenberg CLI**: The BB CLI tools are included with Noir installation
+
+3. **Verify Installation**:
    ```bash
    nargo --version
+   bb --version
    ```
 
 ### Installation & Setup
@@ -56,40 +59,79 @@ ZK Witness Coimbatore/
 
 ## 🎮 How to Run
 
-### 1. Compile the Circuit
+### Step 1: Generate Witness
 
-```bash
-nargo compile
-```
-
-This compiles the Noir circuit and generates the necessary artifacts.
-
-### 2. Generate a Proof
-
-```bash
-nargo prove
-```
-
-This command:
-- Reads the puzzle and solution from `Prover.toml`
-- Generates a zero-knowledge proof that the solution is valid
-- Creates a proof file that can be verified without revealing the solution
-
-### 3. Verify the Proof
-
-```bash
-nargo verify
-```
-
-This verifies that the generated proof is valid for the given puzzle.
-
-### 4. Run the Program
+First, we need to generate a witness using our public and private inputs:
 
 ```bash
 nargo execute
 ```
 
-This runs the circuit with the inputs from `Prover.toml` and outputs the result.
+This command:
+- Reads the puzzle (public input) and solution (private input) from `Prover.toml`
+- Executes the circuit and generates a witness file
+- The witness contains all the intermediate values needed for proof generation
+
+### Step 2: Generate Proof using Barretenberg (BB)
+
+After generating the witness, we use the Barretenberg backend to create the actual zero-knowledge proof:
+
+```bash
+bb prove -w target/zkwitness.gz -b target/zkwitness.json -o target
+```
+
+This command:
+- `-w target/zkwitness.gz`: Path to the witness file
+- `-b target/zkwitness.json`: Path to the bytecode file
+- `-o target`: Output directory for the proof
+
+### Step 3: View the Generated Proof
+
+To view the generated proof in hexadecimal format:
+
+```bash
+cat ./target/proof | od -An -v -t x1 | tr -d $' \n' | sed 's/^.\{8\}//'
+```
+
+This displays the proof in a readable hexadecimal format.
+
+### Step 4: Clean Up (Optional)
+
+After generating the proof, you can clean up intermediate files:
+
+```bash
+rm Prover.toml
+rm -rf target/zkwitness.gz
+rm -rf target/zkwitness.json
+```
+
+Now you have only the proof file and public inputs - perfect for sharing with verifiers!
+
+### Step 5: Verify the Proof
+
+There are two ways to verify the proof:
+
+#### Method 1: Using Verification Key
+
+1. **Generate Verification Key**:
+   ```bash
+   bb write_vk -b target/zkwitness.json -o target
+   ```
+
+2. **Verify the Proof**:
+   ```bash
+   bb verify
+   ```
+
+#### Method 2: Using Smart Contract
+
+Generate a Solidity smart contract for on-chain verification:
+
+```bash
+bb write_solidity_verifier
+```
+
+This creates a Solidity contract that can verify the proof on Ethereum or other EVM-compatible blockchains.
 
 ## 🧩 Understanding the Circuit
 
@@ -173,9 +215,16 @@ To test with different puzzles:
    ]
    ```
 
-2. **Run the proof generation**:
+2. **Generate witness and proof**:
    ```bash
-   nargo prove
+   nargo execute
+   bb prove -w target/zkwitness.gz -b target/zkwitness.json -o target
+   ```
+
+3. **Verify the proof**:
+   ```bash
+   bb write_vk -b target/zkwitness.json -o target
+   bb verify
    ```
 
 ### Modifying the Circuit
@@ -197,15 +246,29 @@ The circuit logic is in `src/main.nr`. Key functions:
    source ~/.bashrc  # or ~/.zshrc
    ```
 
-2. **Compilation errors**:
+2. **"BB CLI not found"**:
+   - BB CLI is included with Noir installation
+   - If not found, reinstall Noir: `noirup update`
+
+3. **Compilation errors**:
    - Ensure all constraints are properly defined
    - Check array bounds and indices
    - Verify input format matches expected types
 
-3. **Proof generation fails**:
+4. **Witness generation fails**:
    - Verify your solution is actually valid
    - Check that puzzle and solution arrays are 81 elements each
    - Ensure solution respects fixed puzzle numbers
+
+5. **Proof generation fails**:
+   - Ensure witness file exists: `ls target/zkwitness.gz`
+   - Check bytecode file exists: `ls target/zkwitness.json`
+   - Verify BB CLI is properly installed: `bb --version`
+
+6. **Verification fails**:
+   - Ensure verification key was generated correctly
+   - Check that proof file exists and is not corrupted
+   - Verify you're using the correct verification method
 
 ### Debug Mode
 
