@@ -48,7 +48,7 @@ ZK Witness Coimbatore/
 
 1. **Clone the repository**:
    ```bash
-   git clone <your-repo-url>
+   git clone https://github.com/Proof-of-Witness/Zk-witness-coimbatore.git
    cd "ZK Witness Coimbatore"
    ```
 
